@@ -72,9 +72,69 @@ document.getElementById("remove-latest").addEventListener("click", () => {
     if (firstMessage) firstMessage.remove();
   }
 });
-// Generate QR code for current URL
-const qr = new QRious({
-  element: document.getElementById('qr-code'),
-  value: 'https://liuyaochia.github.io/pinny-wedding/front-end-coding-learning/pinny.html',
-  size: 120
+
+// 🧩 Import Firebase libraries
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, push, onChildAdded, remove, get, child } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+// 🔐 Your Firebase config (replace this with your own from the console)
+const firebaseConfig = {
+  apiKey: "AIzaSyCLm14rMw4cfu05Nr4UGke4PaHVExAqBPM",
+  authDomain: "pinny-c0821.firebaseapp.com",
+  projectId: "pinny-c0821",
+  storageBucket: "pinny-c0821.firebasestorage.app",
+  messagingSenderId: "267528625996",
+  appId: "1:267528625996:web:349d83b09740046dbb79e9"
+};
+
+
+// 🔌 Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const messagesRef = ref(db, "messages");
+
+// DOM elements
+const form = document.getElementById("msg-form");
+const list = document.getElementById("msg-list");
+const nickInput = document.getElementById("nickname");
+const textInput = document.getElementById("message");
+
+// Listen to new messages from Firebase
+onChildAdded(messagesRef, snapshot => {
+  const msg = snapshot.val();
+  renderMessage(msg, snapshot.key);
 });
+
+// Handle form submission
+form.addEventListener("submit", e => {
+  e.preventDefault();
+  const nick = nickInput.value.trim() || "匿名";
+  const text = textInput.value.trim();
+  if (!text) return;
+
+  const msg = {
+    nick,
+    text,
+    time: new Date().toLocaleTimeString(),
+    color: randomColor()
+  };
+
+  // Save to Firebase
+  push(messagesRef, msg);
+  textInput.value = "";
+});
+
+// Wait a short moment to ensure QRious is loaded
+setTimeout(() => {
+  const qrCanvas = document.getElementById("qr-code");
+  if (qrCanvas && window.QRious) {
+    new QRious({
+      element: qrCanvas,
+      value: 'https://liuyaochia.github.io/pinny-wedding/front-end-coding-learning/pinny.html',
+      size: 120
+    });
+    console.log("QR Code generated:", 'https://liuyaochia.github.io/pinny-wedding/front-end-coding-learning/pinny.html');
+  } else {
+    console.warn("QRious not found or canvas missing");
+  }
+}, 100); // Wait 100ms to ensure canvas is in DOM
