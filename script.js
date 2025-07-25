@@ -5,7 +5,8 @@ import {
   ref,
   push,
   onChildAdded,
-  onChildRemoved
+  onChildRemoved,
+  remove
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 // ✅ Firebase config
@@ -18,7 +19,7 @@ const firebaseConfig = {
   appId: "1:267528625996:web:349d83b09740046dbb79e9"
 };
 
-// 🔌 Initialize
+// 🔌 Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const messagesRef = ref(db, "messages");
@@ -30,15 +31,18 @@ const nickInput = document.getElementById("nickname");
 const textInput = document.getElementById("message");
 const removeBtn = document.getElementById("remove-latest");
 
-// 🧠 Store message keys in order
+// 🧠 Track message keys for deletion
 const msgKeyOrder = [];
 
-// 📩 Listen for new messages (syncs to all devices)
+// 📩 Listen for new messages
 onChildAdded(messagesRef, snapshot => {
   const msg = snapshot.val();
   const key = snapshot.key;
 
-  msgKeyOrder.push(key);
+  // Avoid duplicate rendering
+  if (document.querySelector(`li[data-key="${key}"]`)) return;
+
+  msgKeyOrder.push(key); // ✅ Track message key order
   renderMessage(msg, key);
 });
 
@@ -47,7 +51,8 @@ onChildRemoved(messagesRef, snapshot => {
   const key = snapshot.key;
   const li = document.querySelector(`li[data-key="${key}"]`);
   if (li) li.remove();
-  // Remove from local key tracker
+
+  // Remove from tracked keys
   const index = msgKeyOrder.indexOf(key);
   if (index !== -1) msgKeyOrder.splice(index, 1);
 });
@@ -70,18 +75,18 @@ form.addEventListener("submit", e => {
   textInput.value = "";
 });
 
-// ❌ Remove latest message (from Firebase and UI)
+// ❌ Remove latest message
 removeBtn.addEventListener("click", async () => {
   const lastKey = msgKeyOrder[msgKeyOrder.length - 1];
   if (!lastKey) return;
   await remove(ref(db, `messages/${lastKey}`));
 });
 
-// 🧱 Render function with key binding
+// 🧱 Render function
 function renderMessage(msg, key) {
   const li = document.createElement("li");
   li.className = "msg-item";
-  li.dataset.key = key; // So we can delete it later
+  li.dataset.key = key;
   li.innerHTML = `
     <div class="msg-avatar" style="background-color: ${msg.color}">
       ${escapeHtml(msg.nick.charAt(0))}
@@ -96,7 +101,7 @@ function renderMessage(msg, key) {
   list.scrollTop = list.scrollHeight;
 }
 
-// 🎨 Generate color
+// 🎨 Generate pastel color
 function randomColor() {
   const hue = Math.floor(Math.random() * 360);
   return `hsl(${hue}, 70%, 60%)`;
@@ -109,7 +114,7 @@ function escapeHtml(s) {
   );
 }
 
-// 🧾 QR Code generation
+// 🧾 QR Code generator
 setTimeout(() => {
   const qrCanvas = document.getElementById("qr-code");
   if (qrCanvas && window.QRious) {
