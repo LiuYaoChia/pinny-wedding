@@ -28,8 +28,17 @@ const removeBtn = document.getElementById("remove-latest");
 const firebaseMsgKeys = [];
 
 // Load and render saved messages from localStorage
-const saved = JSON.parse(localStorage.getItem("advancedMsgs") || "[]");
-saved.forEach(msg => renderMessage(msg, false));
+import { onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+onValue(messagesRef, snapshot => {
+  list.innerHTML = ""; // Clear current messages
+  const data = snapshot.val();
+  if (!data) return;
+
+  Object.values(data).forEach(msg => {
+    renderMessage(msg, false);
+  });
+});
 
 // Listen for new messages in Firebase
 onChildAdded(messagesRef, snapshot => {
