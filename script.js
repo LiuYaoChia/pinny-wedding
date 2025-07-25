@@ -1,5 +1,5 @@
 // 🔧 Import Firebase
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { initializeApp } from "firebase/app";
 import {
   getDatabase,
   ref,
@@ -8,6 +8,8 @@ import {
   onChildRemoved,
   remove
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+localStorage.removeItem("firebase:previous_websocket_failure");
 
 // ✅ Firebase config
 const firebaseConfig = {
