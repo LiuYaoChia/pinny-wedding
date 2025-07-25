@@ -1,8 +1,8 @@
-// 🧩 Import Firebase libraries at top-level
+// ✅ Import Firebase libraries
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, push, onChildAdded, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-// 🔐 Firebase configuration (use your own!)
+// 🔐 Firebase config (replace with your actual config)
 const firebaseConfig = {
   apiKey: "AIzaSyCLm14rMw4cfu05Nr4UGke4PaHVExAqBPM",
   authDomain: "pinny-c0821.firebaseapp.com",
@@ -12,49 +12,43 @@ const firebaseConfig = {
   appId: "1:267528625996:web:349d83b09740046dbb79e9"
 };
 
-// Initialize Firebase and Database
+// 🔌 Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const messagesRef = ref(db, "messages");
 
-// DOM elements
+// 🔧 DOM Elements
 const form = document.getElementById("msg-form");
 const list = document.getElementById("msg-list");
 const nickInput = document.getElementById("nickname");
 const textInput = document.getElementById("message");
 const removeBtn = document.getElementById("remove-latest");
 
-// Track Firebase message keys (to know which to remove)
-const firebaseMsgKeys = [];
+// 🌐 Store Firebase keys and messages for deletion
+let firebaseMessages = []; // Array of { key, msg }
 
-// Load and render saved messages from localStorage
-import { onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-
+// 📡 Listen for real-time updates from Firebase
 onValue(messagesRef, snapshot => {
-  list.innerHTML = ""; // Clear current messages
   const data = snapshot.val();
+  list.innerHTML = ""; // Clear current UI
+  firebaseMessages = []; // Clear keys
+
   if (!data) return;
 
-  Object.values(data).forEach(msg => {
-    renderMessage(msg, false);
-  });
-});
-
-// Listen for new messages in Firebase
-onChildAdded(messagesRef, snapshot => {
-  const key = snapshot.key;
-  const msg = snapshot.val();
-
-  // Avoid rendering duplicates (if key already tracked)
-  if (!firebaseMsgKeys.includes(key)) {
-    firebaseMsgKeys.push(key);
+  // Render messages from Firebase
+  for (const key in data) {
+    const msg = data[key];
+    firebaseMessages.push({ key, msg });
     renderMessage(msg, false);
   }
+
+  list.scrollTop = list.scrollHeight;
 });
 
-// Unified form submit: push message to Firebase & save in localStorage
+// ✏️ Handle form submission
 form.addEventListener("submit", e => {
   e.preventDefault();
+
   const nick = nickInput.value.trim() || "匿名";
   const text = textInput.value.trim();
   if (!text) return;
@@ -66,38 +60,19 @@ form.addEventListener("submit", e => {
     color: randomColor()
   };
 
-  // Push message to Firebase
-  push(messagesRef, msg).then(() => {
-    // Update localStorage backup
-    const saved = JSON.parse(localStorage.getItem("advancedMsgs") || "[]");
-    saved.push(msg);
-    localStorage.setItem("advancedMsgs", JSON.stringify(saved));
-  });
-
+  push(messagesRef, msg);
   textInput.value = "";
 });
 
-// Remove latest message from localStorage, Firebase & UI
+// ❌ Remove the latest message from Firebase
 removeBtn.addEventListener("click", async () => {
-  // Remove last from localStorage
-  const saved = JSON.parse(localStorage.getItem("advancedMsgs") || "[]");
-  if (saved.length > 0) {
-    saved.pop();
-    localStorage.setItem("advancedMsgs", JSON.stringify(saved));
-  }
+  if (firebaseMessages.length === 0) return;
 
-  // Remove last from Firebase by key
-  if (firebaseMsgKeys.length > 0) {
-    const lastKey = firebaseMsgKeys.pop();
-    await remove(ref(db, `messages/${lastKey}`));
-  }
-
-  // Remove last message from UI
-  const lastMessage = list.querySelector("li.msg-item:last-child");
-  if (lastMessage) lastMessage.remove();
+  const lastMessage = firebaseMessages[firebaseMessages.length - 1];
+  await remove(ref(db, `messages/${lastMessage.key}`));
 });
 
-// Render a message in the message list
+// 💬 Render a message in the message list
 function renderMessage(msg, prepend) {
   const li = document.createElement("li");
   li.className = "msg-item";
@@ -112,23 +87,22 @@ function renderMessage(msg, prepend) {
   `;
   if (prepend) list.prepend(li);
   else list.appendChild(li);
-  list.scrollTop = list.scrollHeight;
 }
 
-// Generate pastel HSL color string
+// 🎨 Generate a pastel color
 function randomColor() {
   const hue = Math.floor(Math.random() * 360);
   return `hsl(${hue}, 70%, 60%)`;
 }
 
-// Escape HTML special chars to prevent XSS
+// 🛡️ Escape HTML
 function escapeHtml(s) {
   return s.replace(/[&<>"']/g, c =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
   );
 }
 
-// QR code generation, delayed to wait for QRious and canvas
+// 📷 QR Code generator
 setTimeout(() => {
   const qrCanvas = document.getElementById("qr-code");
   if (qrCanvas && window.QRious) {
@@ -142,3 +116,4 @@ setTimeout(() => {
     console.warn("QRious not found or canvas missing");
   }
 }, 100);
+
